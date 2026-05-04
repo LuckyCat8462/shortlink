@@ -23,6 +23,9 @@ func main() {
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
 
+	// 测试config是否正常得到
+	fmt.Printf("load conf::%#v\n", c)
+
 	server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()
 
