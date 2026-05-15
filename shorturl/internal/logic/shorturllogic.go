@@ -8,14 +8,16 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"shorturl/internal/svc"
 	"shorturl/internal/types"
+	"shorturl/model"
+	"shorturl/pkg/base62"
 	"shorturl/pkg/connect"
 	"shorturl/pkg/md5"
 	"shorturl/pkg/urltool"
 
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type ShorturlLogic struct {
@@ -52,7 +54,7 @@ func (l *ShorturlLogic) Shorturl(req *types.ConvertRequest) (resp *types.Convert
 		if err == nil {
 			return nil, fmt.Errorf("该链接已被转为%s", u.Surl.String)
 		}
-		logx.Errorw("shorturlmodel.findonebymd5 filed", logx.LogField{
+		logx.Errorw("shortUrlModel.FindOneByMD5 filed", logx.LogField{
 			Key:   "err",
 			Value: err.Error(),
 		})
@@ -80,8 +82,37 @@ func (l *ShorturlLogic) Shorturl(req *types.ConvertRequest) (resp *types.Convert
 	}
 
 	// 2、取号
+	// 基于MySQL实现的发号器
+	// 每来一个转链请求，就使用replace into语句，向sequence表插入数据，取出主键id作为号码
+	seqID, err := l.svcCtx.Sequence.Next()
+	if err != nil {
+		logx.Errorw("Sequence.Next() failed", logx.LogField{Key: "err", Value: err.Error()})
+		return nil, err
+	}
+	// fmt.Println(seqID)
+	_ = seqID // 后续可以使用这个seqID来生成短链接
 	// 3、将号码转短链
+	shortURL := base62.Int2String(seqID)
+	// 3.1.考虑安全性,打乱base32字符串
+	// 3.2.考虑关键词，避免使用敏感词，设立黑名单机制，例如health,status,metrics,fuxk,convert
+	if _, ok := l.svcCtx.ShortURLBlacklist[shortURL]; ok {
+		return nil, fmt.Errorf("短链接不能包含敏感词%s", shortURL)
+	}
+
 	// 4、存储长短链映射关系
+	if _, err := l.svcCtx.ShortUrlModel.Insert(l.ctx, &model.ShortUrlMap{
+		Lurl: sql.NullString{String: req.LongURL, Valid: true},
+		Surl: sql.NullString{String: shortURL, Valid: true},
+		Md5:  sql.NullString{String: md5Value, Valid: true},
+	}); err != nil {
+		logx.Errorw("shortUrlModel.Insert filed", logx.LogField{
+			Key:   "err",
+			Value: err.Error(),
+		})
+		return nil, err
+	}
+
 	// 5、返回响应
-	return
+	shortURL = l.svcCtx.Config.ShortDomain + "/" + shortURL
+	return &types.ConvertResponse{ShortURL: shortURL}, nil
 }

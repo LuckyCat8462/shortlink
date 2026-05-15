@@ -6,3 +6,6 @@ ShortUrlDB:
   DSN: root:123456@tcp(127.0.0.1:3308)/shortlink
 SequenceDB:
   DSN: root:123456@tcp(127.0.0.1:3308)/shortlink
+
+ShortURLBlacklist: ["health", "status", "metrics","fuxk","convert"]
+ShortDomain: "https://shortlink.Felix.com"

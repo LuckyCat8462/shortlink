@@ -4,21 +4,32 @@
 package svc
 
 import (
-	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"shorturl/internal/config"
 	"shorturl/model"
+	"shorturl/sequence"
+
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
 type ServiceContext struct {
-	Config        config.Config
-	ShortUrlModel model.ShortUrlMapModel
+	Config            config.Config
+	ShortUrlModel     model.ShortUrlMapModel
+	Sequence          sequence.Sequence
+	ShortURLBlacklist map[string]struct{}
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	// 初始化数据库连接
 	conn := sqlx.NewMysql(c.ShortUrlDB.DSN)
+	// 构造黑名单map时，从config中读取黑名单列表
+	m := make(map[string]struct{}, len(c.ShortURLBlacklist))
+	for _, v := range c.ShortURLBlacklist {
+		m[v] = struct{}{}
+	}
 	return &ServiceContext{
-		Config:        c,
-		ShortUrlModel: model.NewShortUrlMapModel(conn),
+		Config:            c,
+		ShortUrlModel:     model.NewShortUrlMapModel(conn),
+		Sequence:          sequence.NewMySQL(c.SequenceDB.DSN),
+		ShortURLBlacklist: m,
 	}
 }
