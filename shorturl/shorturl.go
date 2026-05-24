@@ -6,7 +6,6 @@ package main
 import (
 	"flag"
 	"fmt"
-
 	"shorturl/internal/config"
 	"shorturl/internal/handler"
 	"shorturl/internal/svc"
@@ -24,7 +23,9 @@ func main() {
 	conf.MustLoad(*configFile, &c)
 
 	// 测试config是否正常得到
-	fmt.Printf("load conf::%#v\n", c)
+	// fmt.Printf("load conf::%#v\n", c)
+
+	// base62.Int2String(uint64(c.Base62Length))
 
 	server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()

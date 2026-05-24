@@ -103,3 +103,19 @@ import "github.com/go-playground/validator/v10"
 
 
 在.api中，为结构体添加validate:"required" tag,并添加校验规则
+
+## 查看短链接
+
+### 缓存方法
+
+1、使用自己的缓存，将短链接映射到长链接，能够节省缓存的数据量surl->lurl
+2、使用redis缓存，将短链接映射到长链接，surl->数据行,开发量小，实现简单
+
+2.1、添加redis配置
+-缓存文件
+-配置config结构体
+2.2.删除旧的model代码，生成新的model代码
+
+
+
+

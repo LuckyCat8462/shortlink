@@ -3,9 +3,17 @@ Host: 0.0.0.0
 Port: 8888
 
 ShortUrlDB:
-  DSN: root:123456@tcp(127.0.0.1:3308)/shortlink
+  DSN: root:123456@tcp(127.0.0.1:3308)/shortlink?parseTime=true&charset=utf8mb4
 SequenceDB:
-  DSN: root:123456@tcp(127.0.0.1:3308)/shortlink
+  DSN: root:123456@tcp(127.0.0.1:3308)/shortlink?parseTime=true&charset=utf8mb4
+
+BaseString : "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 ShortURLBlacklist: ["health", "status", "metrics","fuxk","convert"]
-ShortDomain: "https://shortlink.Felix.com"
+
+ShortDomain: felix.com
+
+CacheRedis:
+  - Host: 127.0.0.1:6379
+
+

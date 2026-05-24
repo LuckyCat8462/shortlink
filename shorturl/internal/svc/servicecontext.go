@@ -4,6 +4,8 @@
 package svc
 
 import (
+	"github.com/zeromicro/go-zero/core/bloom"
+	"github.com/zeromicro/go-zero/core/stores/redis"
 	"shorturl/internal/config"
 	"shorturl/model"
 	"shorturl/sequence"
@@ -16,6 +18,8 @@ type ServiceContext struct {
 	ShortUrlModel     model.ShortUrlMapModel
 	Sequence          sequence.Sequence
 	ShortURLBlacklist map[string]struct{}
+	// 	布隆过滤器
+	Filter *bloom.Filter
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -26,10 +30,25 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	for _, v := range c.ShortURLBlacklist {
 		m[v] = struct{}{}
 	}
+	// 初始化布隆过滤器
+	// 初始化 bitset
+	store := redis.New(c.CacheRedis[0].Host, func(r *redis.Redis) {
+		r.Type = redis.NodeType
+	})
+	// 声明一个bitset
+	filter := bloom.New(store, "test_key", 20*(1<<20))
+	// 加载已有的短连接数据
+	// filter := bloom.NewWithEstimates(1000000, 0.01)
 	return &ServiceContext{
 		Config:            c,
-		ShortUrlModel:     model.NewShortUrlMapModel(conn),
+		ShortUrlModel:     model.NewShortUrlMapModel(conn, c.CacheRedis),
 		Sequence:          sequence.NewMySQL(c.SequenceDB.DSN),
 		ShortURLBlacklist: m,
+		Filter:            filter,
 	}
+}
+
+// 加载已有的数据到布隆过滤器
+func loadDataToBloomFilter() {
+
 }

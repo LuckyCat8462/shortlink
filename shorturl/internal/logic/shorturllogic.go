@@ -93,7 +93,7 @@ func (l *ShorturlLogic) Shorturl(req *types.ConvertRequest) (resp *types.Convert
 	_ = seqID // 后续可以使用这个seqID来生成短链接
 	// 3、将号码转短链
 	shortURL := base62.Int2String(seqID)
-	// 3.1.考虑安全性,打乱base32字符串
+	// 3.1.考虑安全性,打乱base62字符串
 	// 3.2.考虑关键词，避免使用敏感词，设立黑名单机制，例如health,status,metrics,fuxk,convert
 	if _, ok := l.svcCtx.ShortURLBlacklist[shortURL]; ok {
 		return nil, fmt.Errorf("短链接不能包含敏感词%s", shortURL)
@@ -110,6 +110,13 @@ func (l *ShorturlLogic) Shorturl(req *types.ConvertRequest) (resp *types.Convert
 			Value: err.Error(),
 		})
 		return nil, err
+	}
+	// 将生成的短连接，加到布隆过滤器中
+	if err := l.svcCtx.Filter.Add([]byte(shortURL)); err != nil {
+		logx.Errorw("Filter.Add filed", logx.LogField{
+			Key:   "err",
+			Value: err.Error(),
+		})
 	}
 
 	// 5、返回响应

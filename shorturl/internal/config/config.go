@@ -3,7 +3,10 @@
 
 package config
 
-import "github.com/zeromicro/go-zero/rest"
+import (
+	"github.com/zeromicro/go-zero/core/stores/cache"
+	"github.com/zeromicro/go-zero/rest"
+)
 
 type Config struct {
 	// 此处rest.RestConf才是结构体嵌入，代表config的实例可以直接访问所有restconf的字段和方法
@@ -20,4 +23,6 @@ type Config struct {
 	}
 	ShortURLBlacklist []string
 	ShortDomain       string
+	CacheRedis        cache.CacheConf
+	Base62Length      int64
 }

@@ -11,7 +11,7 @@ type ConvertResponse {
 
 //查链接
 type ShowUrlRequest {
-	ShortURL string `json:"shortUrl" validate:"required"`
+	ShortURL string `path:"shortUrl" validate:"required"`
 }
 
 type ShowUrlResponse {
@@ -27,6 +27,6 @@ service shorturl-api {
 	// 通过短链查长链
 	// post /:shortUrl，动态路由，带路径参数，冒号后面的shortUrl是一个占位符，可以匹配实际的url
 	@handler ShowUrlHandler
-	post /:shortUrl (ShowUrlRequest) returns (ShowUrlResponse)
+	get /:shortUrl (ShowUrlRequest) returns (ShowUrlResponse)
 }
 

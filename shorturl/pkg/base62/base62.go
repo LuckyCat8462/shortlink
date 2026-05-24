@@ -19,6 +19,9 @@ package base62
 
 const base62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+// 为了避免恶意请求，打乱上方字符串
+// 例如：0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -> 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+
 func Int2String(seq uint64) string {
 	if seq == 0 {
 		return string(base62[0])
@@ -31,7 +34,6 @@ func Int2String(seq uint64) string {
 	}
 	return string(reverse(bl))
 }
-
 
 func reverse(s []byte) []byte {
 	for i := 0; i < len(s)/2; i++ {
