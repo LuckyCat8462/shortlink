@@ -1,0 +1,37 @@
+Name: shorturl-api
+Host: 0.0.0.0
+Port: 8888
+
+# 短链映射表数据库
+ShortUrlDB:
+  DSN: root:YOUR_PASSWORD@tcp(127.0.0.1:3306)/shortlink?parseTime=true&loc=Local&charset=utf8mb4
+# 发号器数据库
+SequenceDB:
+  DSN: root:YOUR_PASSWORD@tcp(127.0.0.1:3306)/shortlink?parseTime=true&loc=Local&charset=utf8mb4
+
+# Redis 缓存
+CacheRedis:
+  - Host: 127.0.0.1:6379
+
+ShortDomain: http://127.0.0.1:8888  # 短链域名（须与真实访问地址一致）
+ApiKey: change-me                    # 创建接口鉴权密钥
+ShortCodeLength: 6                   # 短码长度
+
+Base62Chars: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"  # Base62 字符集
+Base62Salt: "change-me-in-production"  # 编码盐值，生产环境请更换
+DefaultExpireDays: 90                # 默认过期天数
+MaxExpireDays: 3650                  # 最大过期天数
+CheckLongURL: false                  # 是否校验长链可达
+EnableHostWhitelist: false           # 是否启用长链域名白名单
+# 禁止作为短码的保留词
+ShortURLBlacklist:
+  - health
+  - api
+  - metrics
+  - favicon.ico
+  - status
+  - static
+SequenceType: mysql                  # 发号器类型：mysql / redis
+ClickLogEnabled: false               # 是否记录点击日志
+RedirectRatePerMin: 120              # 跳转限流（次/分钟）
+CreateRatePerMin: 60                 # 创建限流（次/分钟）

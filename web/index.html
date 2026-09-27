@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shortlink · 演示</title>
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <p class="brand">Shortlink</p>
+      <h1>长链转短链</h1>
+      <p class="lead">输入链接生成 6 位短码，打开跳转并查看点击统计。</p>
+    </header>
+
+    <section class="panel" aria-labelledby="form-title">
+      <h2 id="form-title" class="sr-only">创建短链</h2>
+      <form id="create-form">
+        <label class="field">
+          <span>API Key</span>
+          <input id="api-key" name="apiKey" type="password" autocomplete="off" placeholder="与服务端配置一致" required />
+        </label>
+        <label class="field">
+          <span>长链接</span>
+          <input id="long-url" name="longUrl" type="url" placeholder="https://example.com/path" required />
+        </label>
+        <div class="row">
+          <label class="field">
+            <span>过期天数</span>
+            <input id="expire-days" name="expireDays" type="number" min="0" max="3650" value="90" />
+            <small>0 = 永不过期</small>
+          </label>
+          <label class="field">
+            <span>场景 ID</span>
+            <input id="scene-id" name="sceneId" type="text" placeholder="可选，空=全局幂等" />
+          </label>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn primary" id="btn-create">生成短链</button>
+        </div>
+      </form>
+      <p id="form-error" class="msg error" hidden></p>
+    </section>
+
+    <section class="panel result" id="result-panel" hidden>
+      <h2>结果</h2>
+      <p class="short-url-line">
+        <a id="short-url" href="#" target="_blank" rel="noopener"></a>
+      </p>
+      <dl class="meta">
+        <div><dt>短码</dt><dd id="short-code"></dd></div>
+        <div><dt>新建</dt><dd id="created"></dd></div>
+        <div><dt>过期</dt><dd id="expire-at"></dd></div>
+      </dl>
+      <div class="actions">
+        <button type="button" class="btn" id="btn-copy">复制短链</button>
+        <a class="btn" id="btn-open" href="#" target="_blank" rel="noopener">打开短链</a>
+        <button type="button" class="btn" id="btn-stats">刷新统计</button>
+      </div>
+      <p id="copy-hint" class="msg ok" hidden>已复制</p>
+    </section>
+
+    <section class="panel stats" id="stats-panel" hidden>
+      <h2>统计</h2>
+      <dl class="meta stats-grid">
+        <div><dt>PV</dt><dd id="stat-pv">—</dd></div>
+        <div><dt>UV</dt><dd id="stat-uv">—</dd></div>
+        <div><dt>最近点击</dt><dd id="stat-la">—</dd></div>
+      </dl>
+      <p id="stats-error" class="msg error" hidden></p>
+    </section>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

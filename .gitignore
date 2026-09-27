@@ -1,1 +1,19 @@
+# IDE
 .idea/
+.vscode/
+
+# 本地真实配置（仓库仅保留 example）
+etc/shorturl-api.yaml
+etc/*local*
+
+# 环境变量
+.env
+.env.*
+
+# 运行 / 编译产物
+.run-*.log
+*.log
+*.exe
+*.test
+/shortlink
+/shorturl

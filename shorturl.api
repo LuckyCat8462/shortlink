@@ -1,0 +1,77 @@
+syntax = "v1"
+
+info (
+	title:   "shorturl"
+	desc:    "short link service"
+	version: "v1"
+)
+
+// 创建短链请求
+type CreateLinkReq {
+	LongUrl    string `json:"longUrl"`            // 原始长链
+	SceneId    string `json:"sceneId,optional"`   // 业务场景标识，可选
+	ExpireDays *int   `json:"expireDays,optional"` // 过期天数，可选
+}
+
+// 创建短链响应
+type CreateLinkResp {
+	ShortUrl  string  `json:"shortUrl"`  // 完整短链
+	ShortCode string  `json:"shortCode"` // 短码
+	LongUrl   string  `json:"longUrl"`   // 原始长链
+	ExpireAt  *string `json:"expireAt"`  // 过期时间
+	Created   bool    `json:"created"`   // 是否新创建（false 表示已存在）
+}
+
+// 查询短链请求
+type GetLinkReq {
+	ShortCode string `path:"shortCode"` // 短码
+}
+
+// 查询短链响应
+type GetLinkResp {
+	ShortCode string  `json:"shortCode"` // 短码
+	LongUrl   string  `json:"longUrl"`   // 原始长链
+	SceneId   string  `json:"sceneId"`   // 业务场景标识
+	Status    int     `json:"status"`    // 状态
+	ExpireAt  *string `json:"expireAt"`  // 过期时间
+	CreatedAt string  `json:"createdAt"` // 创建时间
+}
+
+// 查询统计请求
+type GetStatsReq {
+	ShortCode string `path:"shortCode"` // 短码
+}
+
+// 查询统计响应
+type GetStatsResp {
+	ShortCode   string  `json:"shortCode"`   // 短码
+	Pv          int64   `json:"pv"`          // 访问次数
+	Uv          int64   `json:"uv"`          // 独立访客数
+	LastClickAt *string `json:"lastClickAt"` // 最近点击时间
+}
+
+// 跳转请求
+type RedirectReq {
+	ShortCode string `path:"shortCode"` // 短码
+}
+
+// 管理接口：创建 / 查询 / 统计
+@server (
+	prefix: /api/v1
+)
+service shorturl-api {
+	@handler CreateLinkHandler
+	post /links (CreateLinkReq) returns (CreateLinkResp) // 创建短链
+
+	@handler GetLinkHandler
+	get /links/:shortCode (GetLinkReq) returns (GetLinkResp) // 查询短链
+
+	@handler GetStatsHandler
+	get /links/:shortCode/stats (GetStatsReq) returns (GetStatsResp) // 查询统计
+}
+
+// 短链跳转
+service shorturl-api {
+	@handler RedirectHandler
+	get /:shortCode (RedirectReq) // 按短码跳转
+}
