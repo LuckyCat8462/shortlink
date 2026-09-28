@@ -1,0 +1,40 @@
+# Example host Nginx reverse proxy for cloud demo (not wired into docker-compose).
+# Point public 80/443 here; keep api bound to 127.0.0.1:8888 only.
+
+upstream shortlink_api {
+    server 127.0.0.1:8888;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    client_max_body_size 1m;
+
+    location / {
+        proxy_pass http://shortlink_api;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# After obtaining a certificate (e.g. Let's Encrypt), add a TLS server block:
+#
+# server {
+#     listen 443 ssl http2;
+#     server_name your.domain.example;
+#     ssl_certificate     /etc/letsencrypt/live/your.domain.example/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/your.domain.example/privkey.pem;
+#
+#     location / {
+#         proxy_pass http://shortlink_api;
+#         proxy_http_version 1.1;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#     }
+# }

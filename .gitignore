@@ -9,6 +9,7 @@ etc/*local*
 # 环境变量
 .env
 .env.*
+!.env.example
 
 # 运行 / 编译产物
 .run-*.log

@@ -1,0 +1,58 @@
+services:
+  mysql:
+    image: mysql:latest
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-shortlink}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./deploy/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    # Default: not published. For local GUI tools, temporarily add:
+    # ports:
+    #   - "127.0.0.1:3306:3306"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    # Default: not published. For local tools, temporarily add:
+    # ports:
+    #   - "127.0.0.1:6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SHORTLINK_DSN: ${SHORTLINK_DSN}
+      SHORTLINK_REDIS: ${SHORTLINK_REDIS:-redis:6379}
+      SHORTLINK_API_KEY: ${SHORTLINK_API_KEY}
+      SHORTLINK_BASE62_SALT: ${SHORTLINK_BASE62_SALT}
+      SHORTLINK_DOMAIN: ${SHORTLINK_DOMAIN:-http://127.0.0.1:8888}
+    ports:
+      - "127.0.0.1:8888:8888"
+
+volumes:
+  mysql_data:
+  redis_data:
