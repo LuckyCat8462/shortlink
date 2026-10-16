@@ -32,6 +32,17 @@ ShortURLBlacklist:
   - status
   - static
 SequenceType: mysql                  # 发号器类型：mysql / redis
-ClickLogEnabled: false               # 是否记录点击日志
+ClickLogEnabled: true                # 写入 click_events（分析助手数据源）
+SeedDemo: false                      # 启动时 seed 演示短链/点击（Compose 用 env 打开）
 RedirectRatePerMin: 120              # 跳转限流（次/分钟）
 CreateRatePerMin: 60                 # 创建限流（次/分钟）
+AssistantRatePerMin: 20              # 分析助手限流（次/分钟）
+AssistantTimeoutSec: 90              # 分析助手单次超时（秒）
+AssistantSessionTTLSec: 7200         # 多轮 session TTL（秒）
+AssistantMaxHistory: 20              # session 保留消息条数（约 10 轮）
+
+# LLM（也可用 SHORTLINK_LLM_* 环境变量覆盖；勿提交真实 Key）
+LLM:
+  APIKey: ""
+  BaseURL: https://api.deepseek.com
+  Model: deepseek-flash

@@ -12,6 +12,7 @@ import (
 func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	apiKey := middleware.ApiKeyMiddleware(serverCtx)
 	createLimit := middleware.CreateRateLimitMiddleware(serverCtx)
+	assistantLimit := middleware.AssistantRateLimitMiddleware(serverCtx)
 	redirectLimit := middleware.RedirectRateLimitMiddleware(serverCtx)
 
 	// Demo UI + health before parametric /:shortCode
@@ -65,6 +66,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodGet,
 				Path:    "/links/:shortCode/stats",
 				Handler: GetStatsHandler(serverCtx),
+			},
+		),
+		rest.WithPrefix("/api/v1"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{apiKey, assistantLimit},
+			rest.Route{
+				Method:  http.MethodPost,
+				Path:    "/assistant/chat",
+				Handler: AssistantChatHandler(serverCtx),
 			},
 		),
 		rest.WithPrefix("/api/v1"),

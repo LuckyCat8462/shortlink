@@ -66,3 +66,27 @@ func RedirectRateLimitMiddleware(svcCtx *svc.ServiceContext) func(http.HandlerFu
 		}
 	}
 }
+
+func AssistantRateLimitMiddleware(svcCtx *svc.ServiceContext) func(http.HandlerFunc) http.HandlerFunc {
+	return func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			key := r.Header.Get("X-API-Key")
+			if key == "" {
+				key = "anonymous"
+			}
+			code, err := svcCtx.AssistantLimiter.Take(key)
+			if err != nil {
+				httpx.ErrorCtx(r.Context(), w, err)
+				return
+			}
+			if code == limit.OverQuota {
+				httpx.WriteJsonCtx(r.Context(), w, http.StatusTooManyRequests, map[string]any{
+					"code": http.StatusTooManyRequests,
+					"msg":  "rate limit exceeded",
+				})
+				return
+			}
+			next(w, r)
+		}
+	}
+}

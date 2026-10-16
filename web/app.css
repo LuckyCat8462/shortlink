@@ -245,3 +245,64 @@ html, body {
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
+
+.assistant-hint {
+  margin: -0.35rem 0 1rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 8rem;
+  max-height: 22rem;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  padding: 0.25rem 0;
+}
+
+.chat-bubble {
+  max-width: 92%;
+  padding: 0.7rem 0.85rem;
+  line-height: 1.5;
+  font-size: 0.92rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-bubble.user {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--accent) 22%, var(--bg0));
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.chat-bubble.assistant {
+  align-self: flex-start;
+  background: var(--bg0);
+  border: 1px solid var(--line);
+}
+
+.chat-bubble.assistant.pending {
+  color: var(--muted);
+}
+
+.chat-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.chat-input-field {
+  margin-bottom: 0;
+}
+
+.assistant-examples {
+  margin: 0.75rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}

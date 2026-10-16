@@ -10,6 +10,13 @@ etc/*local*
 .env
 .env.*
 !.env.example
+key.md
+*.apikey
+
+# 本地笔记 / 不应进公开仓库
+ai.md
+启动流程.md
+/click_events.sql
 
 # 运行 / 编译产物
 .run-*.log

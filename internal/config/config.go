@@ -28,8 +28,19 @@ type Config struct {
 	EnableHostWhitelist bool     // 是否启用长链域名白名单
 	ShortURLBlacklist   []string // 禁止作为短码的保留词
 	SequenceType        string   // 发号器类型：mysql / redis
-	ClickLogEnabled     bool     // 是否记录点击日志
+	ClickLogEnabled     bool     // 是否写入 click_events（分析助手数据源）
+	SeedDemo            bool     // 启动时写入演示短链与点击明细
 
 	RedirectRatePerMin int // 跳转限流（次/分钟）
 	CreateRatePerMin   int // 创建限流（次/分钟）
+	AssistantRatePerMin int // 分析助手限流（次/分钟）
+	AssistantTimeoutSec int // 分析助手单次超时（秒）
+	AssistantSessionTTLSec int // session TTL（秒）
+	AssistantMaxHistory    int // session 保留消息条数
+
+	LLM struct {
+		APIKey  string
+		BaseURL string
+		Model   string
+	}
 }

@@ -1,8 +1,8 @@
 # Example host Nginx reverse proxy for cloud demo (not wired into docker-compose).
-# Point public 80/443 here; keep api bound to 127.0.0.1:8888 only.
+# Point public 80/443 here; keep api bound to 127.0.0.1:${API_HOST_PORT} only (default 8890).
 
 upstream shortlink_api {
-    server 127.0.0.1:8888;
+    server 127.0.0.1:8890;
 }
 
 server {

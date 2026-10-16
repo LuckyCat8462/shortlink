@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shortlink
+  namespace: shortlink
+  labels:
+    app.kubernetes.io/name: shortlink
+data:
+  # Matches local port-forward (18888→8888). Avoids common clashes on host :8888.
+  short-domain: http://127.0.0.1:18888
+  redis-host: redis:6379
+  click-log: "true"
+  # Safe with replicas: 1. Turn off before scaling API replicas.
+  seed-demo: "true"
+  llm-base-url: https://api.deepseek.com
+  llm-model: deepseek-flash

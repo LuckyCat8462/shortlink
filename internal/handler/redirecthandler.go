@@ -30,7 +30,7 @@ func RedirectHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 
-		l.RecordClick(req.ShortCode, httpx.GetRemoteAddr(r))
+		l.RecordClick(req.ShortCode, httpx.GetRemoteAddr(r), r.UserAgent())
 		http.Redirect(w, r, longURL, http.StatusFound)
 	}
 }

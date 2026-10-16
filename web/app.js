@@ -1,5 +1,6 @@
 (function () {
   const KEY_STORAGE = "shortlink.apiKey";
+  const SESSION_STORAGE = "shortlink.assistantSession";
 
   const el = {
     form: document.getElementById("create-form"),
@@ -23,9 +24,15 @@
     statUv: document.getElementById("stat-uv"),
     statLa: document.getElementById("stat-la"),
     statsError: document.getElementById("stats-error"),
+    chatLog: document.getElementById("chat-log"),
+    chatForm: document.getElementById("chat-form"),
+    chatInput: document.getElementById("chat-input"),
+    btnChat: document.getElementById("btn-chat"),
+    chatError: document.getElementById("chat-error"),
   };
 
   let currentCode = "";
+  let sessionId = localStorage.getItem(SESSION_STORAGE) || "";
 
   const savedKey = localStorage.getItem(KEY_STORAGE);
   if (savedKey) {
@@ -156,4 +163,115 @@
       showError(el.statsError, "网络错误：" + (err && err.message ? err.message : String(err)));
     }
   }
+
+  function appendBubble(role, text, pending) {
+    const div = document.createElement("div");
+    div.className = "chat-bubble " + role + (pending ? " pending" : "");
+    div.textContent = text || "";
+    el.chatLog.appendChild(div);
+    el.chatLog.scrollTop = el.chatLog.scrollHeight;
+    return div;
+  }
+
+  async function readSSE(res, handlers) {
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let sep;
+      while ((sep = buf.indexOf("\n\n")) >= 0) {
+        const chunk = buf.slice(0, sep);
+        buf = buf.slice(sep + 2);
+        let event = "message";
+        let data = "";
+        chunk.split("\n").forEach(function (line) {
+          if (line.indexOf("event:") === 0) event = line.slice(6).trim();
+          else if (line.indexOf("data:") === 0) data += line.slice(5).trim();
+        });
+        if (!data) continue;
+        let payload = data;
+        try {
+          payload = JSON.parse(data);
+        } catch (_) {}
+        if (handlers[event]) handlers[event](payload);
+      }
+    }
+  }
+
+  el.chatForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    showError(el.chatError, "");
+    const key = apiKey();
+    if (!key) {
+      showError(el.chatError, "请先填写上方 API Key");
+      return;
+    }
+    localStorage.setItem(KEY_STORAGE, key);
+    const message = el.chatInput.value.trim();
+    if (!message) return;
+
+    appendBubble("user", message, false);
+    el.chatInput.value = "";
+    const bot = appendBubble("assistant", "思考中…", true);
+    el.btnChat.disabled = true;
+
+    try {
+      const res = await fetch("/api/v1/assistant/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": key,
+          Accept: "text/event-stream",
+        },
+        body: JSON.stringify({ sessionId: sessionId, message: message }),
+      });
+      if (!res.ok) {
+        const msg = await parseError(res);
+        bot.classList.remove("pending");
+        bot.textContent = msg;
+        showError(el.chatError, msg);
+        return;
+      }
+
+      let gotDelta = false;
+      await readSSE(res, {
+        session: function (p) {
+          if (p && p.sessionId) {
+            sessionId = p.sessionId;
+            localStorage.setItem(SESSION_STORAGE, sessionId);
+          }
+        },
+        status: function () {},
+        delta: function (p) {
+          const text = p && p.text != null ? p.text : String(p || "");
+          if (!gotDelta) {
+            bot.textContent = "";
+            bot.classList.remove("pending");
+            gotDelta = true;
+          }
+          bot.textContent += text;
+          el.chatLog.scrollTop = el.chatLog.scrollHeight;
+        },
+        error: function (p) {
+          const msg = (p && p.message) || "助手错误";
+          bot.classList.remove("pending");
+          if (!gotDelta) bot.textContent = msg;
+          showError(el.chatError, msg);
+        },
+        done: function () {
+          bot.classList.remove("pending");
+          if (!gotDelta && !bot.textContent) bot.textContent = "（无回复）";
+        },
+      });
+    } catch (err) {
+      bot.classList.remove("pending");
+      bot.textContent = "网络错误";
+      showError(el.chatError, "网络错误：" + (err && err.message ? err.message : String(err)));
+    } finally {
+      el.btnChat.disabled = false;
+    }
+  });
 })();

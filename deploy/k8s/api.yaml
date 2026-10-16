@@ -1,0 +1,143 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: shortlink
+  labels:
+    app.kubernetes.io/name: shortlink
+    app.kubernetes.io/component: api
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: shortlink
+    app.kubernetes.io/component: api
+  ports:
+    - name: http
+      port: 8888
+      targetPort: 8888
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: shortlink
+  labels:
+    app.kubernetes.io/name: shortlink
+    app.kubernetes.io/component: api
+spec:
+  # Demo default: 1 replica so SHORTLINK_SEED_DEMO=true is safe.
+  # To scale: set seed-demo=false in ConfigMap, then kubectl scale deploy/api --replicas=2 -n shortlink
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: shortlink
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: shortlink
+        app.kubernetes.io/component: api
+    spec:
+      initContainers:
+        - name: wait-mysql
+          image: mysql:8.4
+          command:
+            - sh
+            - -c
+            - |
+              until mysqladmin ping -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --silent; do
+                echo "waiting for mysql..."
+                sleep 2
+              done
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shortlink
+                  key: mysql-root-password
+        - name: wait-redis
+          image: redis:7-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until redis-cli -h redis ping | grep -q PONG; do
+                echo "waiting for redis..."
+                sleep 2
+              done
+      containers:
+        - name: api
+          image: shortlink:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8888
+              name: http
+          env:
+            - name: SHORTLINK_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: shortlink
+                  key: dsn
+            - name: SHORTLINK_REDIS
+              valueFrom:
+                configMapKeyRef:
+                  name: shortlink
+                  key: redis-host
+            - name: SHORTLINK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: shortlink
+                  key: api-key
+            - name: SHORTLINK_BASE62_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: shortlink
+                  key: base62-salt
+            - name: SHORTLINK_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: shortlink
+                  key: short-domain
+            - name: SHORTLINK_CLICK_LOG
+              valueFrom:
+                configMapKeyRef:
+                  name: shortlink
+                  key: click-log
+            - name: SHORTLINK_SEED_DEMO
+              valueFrom:
+                configMapKeyRef:
+                  name: shortlink
+                  key: seed-demo
+            - name: SHORTLINK_LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: shortlink
+                  key: llm-api-key
+            - name: SHORTLINK_LLM_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: shortlink
+                  key: llm-base-url
+            - name: SHORTLINK_LLM_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: shortlink
+                  key: llm-model
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi

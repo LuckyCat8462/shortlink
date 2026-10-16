@@ -107,7 +107,7 @@ func (l *RedirectLogic) checkMapping(code, longURL string, status int64, expireA
 }
 
 // RecordClick runs asynchronously; must not block redirect.
-func (l *RedirectLogic) RecordClick(code, clientIP string) {
+func (l *RedirectLogic) RecordClick(code, clientIP, userAgent string) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -115,17 +115,41 @@ func (l *RedirectLogic) RecordClick(code, clientIP string) {
 			}
 		}()
 		ipHash := hashIP(clientIP)
-		now := time.Now().Format(time.RFC3339)
+		now := time.Now()
+		nowStr := now.Format(time.RFC3339)
 		if _, err := l.svcCtx.Redis.Incr(rediskey.PV(code)); err != nil {
 			logx.Errorw("pv incr failed", logx.LogField{Key: "err", Value: err.Error()})
 		}
 		if _, err := l.svcCtx.Redis.Pfadd(rediskey.UV(code), ipHash); err != nil {
 			logx.Errorw("uv pfadd failed", logx.LogField{Key: "err", Value: err.Error()})
 		}
-		if err := l.svcCtx.Redis.Set(rediskey.LastClick(code), now); err != nil {
+		if err := l.svcCtx.Redis.Set(rediskey.LastClick(code), nowStr); err != nil {
 			logx.Errorw("lastClick set failed", logx.LogField{Key: "err", Value: err.Error()})
 		}
+
+		if !l.svcCtx.Config.ClickLogEnabled || l.svcCtx.Stats == nil {
+			return
+		}
+		sceneID := l.lookupSceneID(code)
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		if err := l.svcCtx.Stats.RecordClick(ctx, code, sceneID, clientIP, userAgent, now); err != nil {
+			logx.Errorw("click_events insert failed", logx.LogField{Key: "err", Value: err.Error()})
+		}
 	}()
+}
+
+func (l *RedirectLogic) lookupSceneID(code string) string {
+	if cached, err := cachex.GetJump(l.svcCtx.Redis, code); err == nil && cached != nil {
+		return cached.SceneId
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	row, err := l.svcCtx.ShortUrlModel.FindOneByShortCode(ctx, code)
+	if err != nil || row == nil {
+		return ""
+	}
+	return row.SceneId
 }
 
 func validShortCode(code string, length int) bool {

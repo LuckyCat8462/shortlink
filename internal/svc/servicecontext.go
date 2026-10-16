@@ -1,9 +1,13 @@
 package svc
 
 import (
+	"context"
 	"fmt"
+	"time"
 
+	"shortlink/internal/assistant"
 	"shortlink/internal/config"
+	"shortlink/internal/stats"
 	"shortlink/model"
 	"shortlink/pkg/base62"
 	"shortlink/pkg/codec"
@@ -12,6 +16,7 @@ import (
 
 	"github.com/zeromicro/go-zero/core/bloom"
 	"github.com/zeromicro/go-zero/core/limit"
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"github.com/zeromicro/go-zero/core/syncx"
@@ -20,6 +25,9 @@ import (
 type ServiceContext struct {
 	Config            config.Config
 	ShortUrlModel     model.ShortUrlMapModel
+	ClickEventModel   model.ClickEventModel
+	Stats             *stats.Repo
+	Chat              *assistant.ChatService
 	Sequence          sequence.Sequence
 	ShortURLBlacklist map[string]struct{}
 	Filter            *bloom.Filter
@@ -29,6 +37,7 @@ type ServiceContext struct {
 	SingleFlight      syncx.SingleFlight
 	RedirectLimiter   *limit.PeriodLimit
 	CreateLimiter     *limit.PeriodLimit
+	AssistantLimiter  *limit.PeriodLimit
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -46,6 +55,21 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	}
 	if c.CreateRatePerMin <= 0 {
 		c.CreateRatePerMin = 60
+	}
+	if c.AssistantRatePerMin <= 0 {
+		c.AssistantRatePerMin = 20
+	}
+	if c.AssistantTimeoutSec <= 0 {
+		c.AssistantTimeoutSec = 90
+	}
+	if c.AssistantSessionTTLSec <= 0 {
+		c.AssistantSessionTTLSec = 7200
+	}
+	if c.AssistantMaxHistory <= 0 {
+		c.AssistantMaxHistory = 20
+	}
+	if c.LLM.BaseURL == "" {
+		c.LLM.BaseURL = "https://api.deepseek.com"
 	}
 	if c.Base62Chars == "" {
 		c.Base62Chars = base62.DefaultCharset
@@ -89,9 +113,30 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		seq = sequence.NewMySQL(c.SequenceDB.DSN)
 	}
 
+	schemaCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := stats.EnsureSchema(schemaCtx, conn); err != nil {
+		logx.Errorf("EnsureSchema click_events: %v", err)
+	}
+
+	clickModel := model.NewClickEventModel(conn)
+	statsRepo := stats.NewRepo(clickModel)
+	llmCfg := assistant.LLMConfig{
+		APIKey:  c.LLM.APIKey,
+		BaseURL: c.LLM.BaseURL,
+		Model:   c.LLM.Model,
+	}
+	chatSvc := &assistant.ChatService{
+		Repo:     statsRepo,
+		Sessions: assistant.NewSessionStore(rds, c.AssistantMaxHistory, c.AssistantSessionTTLSec),
+		LLM:      llmCfg,
+	}
 	return &ServiceContext{
 		Config:            c,
 		ShortUrlModel:     model.NewShortUrlMapModel(conn),
+		ClickEventModel:   clickModel,
+		Stats:             statsRepo,
+		Chat:              chatSvc,
 		Sequence:          seq,
 		ShortURLBlacklist: bl,
 		Filter:            filter,
@@ -101,5 +146,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		SingleFlight:      syncx.NewSingleFlight(),
 		RedirectLimiter:   limit.NewPeriodLimit(60, c.RedirectRatePerMin, rds, rediskey.PrefixRateRedirect),
 		CreateLimiter:     limit.NewPeriodLimit(60, c.CreateRatePerMin, rds, rediskey.PrefixRateCreate),
+		AssistantLimiter:  limit.NewPeriodLimit(60, c.AssistantRatePerMin, rds, rediskey.PrefixRateAssistant),
 	}
 }

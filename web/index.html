@@ -70,6 +70,21 @@
       </dl>
       <p id="stats-error" class="msg error" hidden></p>
     </section>
+
+    <section class="panel assistant" aria-labelledby="assistant-title">
+      <h2 id="assistant-title">分析助手</h2>
+      <p class="assistant-hint">用自然语言问点击、渠道与趋势。数据以落库为准；支持多轮追问。</p>
+      <div id="chat-log" class="chat-log" aria-live="polite"></div>
+      <form id="chat-form" class="chat-form">
+        <label class="field chat-input-field">
+          <span class="sr-only">问题</span>
+          <input id="chat-input" type="text" placeholder="例如：昨天哪个推广渠道点击更高？" autocomplete="off" />
+        </label>
+        <button type="submit" class="btn primary" id="btn-chat">发送</button>
+      </form>
+      <p id="chat-error" class="msg error" hidden></p>
+      <p class="assistant-examples">可试：昨天哪个渠道更高 · demos1 总 PV · 近 7 日趋势 · demos1 的 UV</p>
+    </section>
   </div>
   <script src="/static/app.js"></script>
 </body>

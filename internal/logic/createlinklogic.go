@@ -28,12 +28,14 @@ func NewCreateLinkLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Create
 	return &CreateLinkLogic{Logger: logx.WithContext(ctx), ctx: ctx, svcCtx: svcCtx}
 }
 
+// CreateLink 创建短链。同一场景下相同长链会复用已有短码。
 func (l *CreateLinkLogic) CreateLink(req *types.CreateLinkReq) (*types.CreateLinkResp, error) {
 	longURL, err := urltool.NormalizeLongURL(req.LongUrl)
 	if err != nil {
 		return nil, errBadRequest(err.Error())
 	}
 
+	// 未传过期天数时用默认值；0 表示永不过期。
 	expireDays := l.svcCtx.Config.DefaultExpireDays
 	if req.ExpireDays != nil {
 		expireDays = *req.ExpireDays
@@ -48,6 +50,7 @@ func (l *CreateLinkLogic) CreateLink(req *types.CreateLinkReq) (*types.CreateLin
 		}
 	}
 
+	// 先查缓存和数据库，命中则直接返回，避免重复创建。
 	sceneID := req.SceneId
 	urlHash := urltool.URLHash(sceneID, longURL)
 
@@ -71,6 +74,7 @@ func (l *CreateLinkLogic) CreateLink(req *types.CreateLinkReq) (*types.CreateLin
 		expirePtr = &t
 	}
 
+	// 生成短码，跳过黑名单，最多重试 10 次。
 	const maxRetry = 10
 	var code string
 	generated := false
@@ -102,6 +106,7 @@ func (l *CreateLinkLogic) CreateLink(req *types.CreateLinkReq) (*types.CreateLin
 		CreatedBy: "api",
 	}
 
+	// 并发下可能撞唯一键：长链已存在则返回旧记录。
 	if _, err := l.svcCtx.ShortUrlModel.Insert(l.ctx, row); err != nil {
 		if model.IsDuplicateErr(err) {
 			if existing, e2 := l.svcCtx.ShortUrlModel.FindOneBySceneHash(l.ctx, sceneID, urlHash); e2 == nil {
